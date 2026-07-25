@@ -11,7 +11,7 @@ This project aims to allow the replacement of the stock BMS with an aftermarket 
 * **RS485 Bus Sniffing & Emulation:** Intercepts dashboard queries and responds with correctly structured data frames.
 * **Error Suppression:** Prevents the dashboard from displaying critical warning codes or the exclamation mark (`!`) when the stock BMS is removed.
 * **Interactive Terminal Control:** Allows real-time simulation and modification of vehicle metrics via the USB serial monitor for testing purposes.
-* **WiFi AP + Telnet Debug (optional):** When `DEBUG_MOTORCYCLE_FRAMES = true`, RS485 frames are broadcast over Telnet (port 23) via a WiFi access point (`MasaiBMS_Logger`).
+* **WiFi AP + Telnet Debug (optional):** When `TELNET_DEBUG = true`, RS485 frames are broadcast over Telnet (port 23) via a WiFi access point (`MasaiBMS_Logger`).
 * **Passive Dump Mode (Sniffing):** Set `READ_FRAME_ONLY = true` in `src/main.cpp` to passively dump raw frames from both the original BMS and motorcycle over USB Serial and Telnet without transmitting or interfering on the RS485 bus.
 * **Dynamic Parameters Handled:**
   * State of Charge (SoC) (`0x08`)
@@ -83,7 +83,7 @@ pio run -t monitor
 
 ### Telnet Debug (optional)
 
-Set `DEBUG_MOTORCYCLE_FRAMES = true` in `src/main.cpp`, then:
+Set `TELNET_DEBUG = true` in `src/main.cpp`, then:
 
 1. Connect to WiFi: `MasaiBMS_Logger` / `password123`
 2. Telnet to `192.168.4.1` port `23`

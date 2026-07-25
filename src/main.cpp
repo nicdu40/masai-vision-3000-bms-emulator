@@ -9,16 +9,16 @@ TelnetLogger telnetLogger(WIFI_SSID, WIFI_PASSWORD, 23);
 // -------------------- RS485 pins (MAX485) --------------------
 #define RS485_RX_PIN    25   // GPIO25 -> RO
 #define RS485_TX_PIN    26   // GPIO26 -> DI
-
-#define DE_PIN          14   // GPIO14 (D5) -> DE
-#define RE_PIN          12   // GPIO12 (D6) -> RE
+#define DE_PIN          27   // GPIO27 -> DE
+#define RE_PIN          14   // GPIO14 -> RE
 
 // -------------------- Serial links --------------------
 HardwareSerial rs485Serial(2);
 
 // -------------------- Debug config --------------------
+static const bool READ_FRAME_ONLY = false; // Set to true to dump frames from original BMS and motorcycle without transmitting
 static const bool DEBUG_MOTORCYCLE_FRAMES = false;
-static const bool TELNET_DEBUG = false;
+static const bool TELNET_DEBUG = true;
 
 // -------------------- Frame settings --------------------
 static const size_t MAX_FRAME_LEN = 64;
@@ -222,6 +222,7 @@ static void processQuery(uint8_t *frame, size_t len) {
 }
 
 static void sendBmsResponse(const uint8_t *response, size_t len) {
+  if (READ_FRAME_ONLY) return;
   if (!response || len == 0) return;
   rs485Transmit();
   rs485Serial.write(response, (uint8_t)len);
@@ -262,13 +263,28 @@ void loop() {
         if (rxIndex < MAX_FRAME_LEN) {
           rxBuffer[rxIndex++] = b;
           if (rxIndex >= 2 && rxBuffer[rxIndex - 2] == 0xE0 && rxBuffer[rxIndex - 1] == 0xF0) {
-            if (TELNET_DEBUG && telnetLogger.isConnected()) {
+            if (READ_FRAME_ONLY) {
+              unsigned long ts = millis();
               char hexBuf[8];
+              String entry = "[" + String(ts) + "ms] ";
               for (size_t i = 0; i < rxIndex; i++) {
                 sprintf(hexBuf, "%02X ", rxBuffer[i]);
-                telnetLogger.broadcast(hexBuf);
+                entry += hexBuf;
               }
-              telnetLogger.broadcast("\r\n");
+              entry += "\r\n";
+              Serial.print(entry);
+              if (TELNET_DEBUG && telnetLogger.isConnected()) {
+                telnetLogger.broadcast(entry.c_str());
+              }
+            } else {
+              if (TELNET_DEBUG && telnetLogger.isConnected()) {
+                char hexBuf[8];
+                for (size_t i = 0; i < rxIndex; i++) {
+                  sprintf(hexBuf, "%02X ", rxBuffer[i]);
+                  telnetLogger.broadcast(hexBuf);
+                }
+                telnetLogger.broadcast("\r\n");
+              }
             }
             processQuery(rxBuffer, rxIndex);
             currentState = WAIT_START;

@@ -12,6 +12,7 @@ This project aims to allow the replacement of the stock BMS with an aftermarket 
 * **Error Suppression:** Prevents the dashboard from displaying critical warning codes or the exclamation mark (`!`) when the stock BMS is removed.
 * **Interactive Terminal Control:** Allows real-time simulation and modification of vehicle metrics via the USB serial monitor for testing purposes.
 * **WiFi AP + Telnet Debug (optional):** When `DEBUG_MOTORCYCLE_FRAMES = true`, RS485 frames are broadcast over Telnet (port 23) via a WiFi access point (`MasaiBMS_Logger`).
+* **Passive Dump Mode (Sniffing):** Set `READ_FRAME_ONLY = true` in `src/main.cpp` to passively dump raw frames from both the original BMS and motorcycle over USB Serial and Telnet without transmitting or interfering on the RS485 bus.
 * **Dynamic Parameters Handled:**
   * State of Charge (SoC) (`0x08`)
   * Operating Current / Discharge mapping (`0x07`)
@@ -21,16 +22,11 @@ This project aims to allow the replacement of the stock BMS with an aftermarket 
 
 ---
 
-## 🧩 Firmware Variants
+## 🧩 Firmware
 
-The project contains two independent firmware files. Flash only one at a time, depending on the task.
+The project now uses a single firmware entry point: [`src/main.cpp`](src/main.cpp).
 
-| File | Purpose | Output / behavior |
-|---|---|---|
-| [`emulator.cpp`](emulator.cpp) | **BMS emulator** | Listens for dashboard queries on RS485 and sends simulated BMS responses. Values can be changed through the USB serial monitor. Uses `HardwareSerial` (UART2) on ESP32. |
-| [`rs485_frame_dumper.cpp`](rs485_frame_dumper.cpp) | **RS485 frame dumper** | Passively captures RS485 traffic and prints frames to USB serial. It also exposes them over a Wi-Fi access point (`MasaiBMS_Logger`) and Telnet on port 23. Uses `HardwareSerial` (UART2) on ESP32. |
-
-The frame dumper keeps the RS485 transceiver in receive mode and does not emulate BMS responses. Use it to collect protocol captures before adding or validating emulator behavior.
+It handles BMS emulation and, when `READ_FRAME_ONLY = true`, passive RS485 frame dumping. In dump mode, it keeps the RS485 transceiver in receive mode and does not send BMS responses.
 
 ---
 
@@ -56,11 +52,12 @@ The checksum relationships above are derived from the available captures and req
 * **Microcontroller:** ESP32 (38-pin) — uses `HardwareSerial` (UART2) instead of `SoftwareSerial`
 * **Transceiver:** MAX485 (RS485 to TTL module)
 * **Connections:**
-  * `MOTO_RX_PIN` (GPIO5) → RO
-  * `MOTO_TX_PIN` (GPIO4) → DI
-  * `DE_PIN` (GPIO14) & `RE_PIN` (GPIO12) → Direction control
+  * `RS485_RX_PIN` (GPIO25) → RO
+  * `RS485_TX_PIN` (GPIO26) → DI
+  * `DE_PIN` (GPIO27) → DE
+  * `RE_PIN` (GPIO14) → RE
 
-> **Note:** ESP32 has 3 UARTs (UART0 = USB debug, UART1/UART2 = available). UART2 is used with GPIO5/GPIO4 remapped via `HardwareSerial::begin(9600, SERIAL_8N1, RX_PIN, TX_PIN)`. Do NOT use GPIO16 (RTC pin) for UART.
+> **Note:** ESP32 has 3 UARTs (UART0 = USB debug, UART1/UART2 = available). UART2 is used with GPIO25/GPIO26 remapped via `HardwareSerial::begin(9600, SERIAL_8N1, RX_PIN, TX_PIN)`. Do NOT use GPIO16 (RTC pin) for UART.
 
 ---
 
@@ -86,7 +83,7 @@ pio run -t monitor
 
 ### Telnet Debug (optional)
 
-Set `DEBUG_MOTORCYCLE_FRAMES = true` in `emulator.cpp`, then:
+Set `DEBUG_MOTORCYCLE_FRAMES = true` in `src/main.cpp`, then:
 
 1. Connect to WiFi: `MasaiBMS_Logger` / `password123`
 2. Telnet to `192.168.4.1` port `23`
@@ -109,21 +106,27 @@ While connected to the serial monitor (115200 baud), you can use the following c
 
 ```
 masai-vision-3000-bms-emulator/
-├── emulator.cpp                  # BMS emulator (HardwareSerial + TelnetLogger)
-├── rs485_frame_dumper.cpp        # RS485 frame dumper (WiFi AP + Telnet)
+├── .gitignore
+├── platformio.ini                # PlatformIO project configuration (ESP32, Arduino)
+├── README.md
+├── src/
+│   └── main.cpp                  # Main firmware entry point (BMS emulation + frame dumping)
+├── include/
+│   └── README                    # Header file directory (placeholder)
 ├── lib/
+│   ├── README                    # Library directory placeholder
 │   └── TelnetLogger/             # WiFi AP + Telnet server library
 │       ├── TelnetLogger.h
 │       └── TelnetLogger.cpp
-├── docs/                         # Protocol documentation
+├── docs/                         # Protocol reverse-engineering documentation
 │   ├── 05_protocol_temperature.md
 │   ├── 07_protocol_current.md
 │   ├── 08_protocol_soc.md
 │   ├── 0A_protocol_unknown.md
 │   ├── 0B_protocol_unknown.md
 │   └── 0C_protocol_charge_discharge_state.md
-├── README.md
-└── .gitignore
+└── test/
+    └── README                    # Test directory placeholder
 ```
 
 ---

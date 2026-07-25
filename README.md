@@ -59,6 +59,8 @@ The checksum relationships above are derived from the available captures and req
 
 > **Note:** ESP32 has 3 UARTs (UART0 = USB debug, UART1/UART2 = available). UART2 is used with GPIO25/GPIO26 remapped via `HardwareSerial::begin(9600, SERIAL_8N1, RX_PIN, TX_PIN)`. Do NOT use GPIO16 (RTC pin) for UART.
 
+![RS485 Schematic](./img/Schematic_Rs485_esp32.png)
+
 ---
 
 ## 🔧 Build & Flash
@@ -125,6 +127,8 @@ masai-vision-3000-bms-emulator/
 │   ├── 0A_protocol_unknown.md
 │   ├── 0B_protocol_unknown.md
 │   └── 0C_protocol_charge_discharge_state.md
+├── img/                          # Project images and schematics
+│   └── Schematic_Rs485_esp32.png
 └── test/
     └── README                    # Test directory placeholder
 ```

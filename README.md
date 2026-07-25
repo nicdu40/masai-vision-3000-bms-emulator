@@ -49,17 +49,31 @@ The checksum relationships above are derived from the available captures and req
 
 ## 🛠️ Hardware Requirements
 
-* **Microcontroller:** ESP32 (38-pin) — uses `HardwareSerial` (UART2) instead of `SoftwareSerial`
+* **Microcontroller:** ESP32 (38-pin)
+
+![ESP32](./img/esp32.png)
+
 * **Transceiver:** MAX485 (RS485 to TTL module)
+
+![MAX485](./img/max485.png)
+
 * **Connections:**
   * `RS485_RX_PIN` (GPIO25) → RO
   * `RS485_TX_PIN` (GPIO26) → DI
   * `DE_PIN` (GPIO27) → DE
   * `RE_PIN` (GPIO14) → RE
 
-> **Note:** ESP32 has 3 UARTs (UART0 = USB debug, UART1/UART2 = available). UART2 is used with GPIO25/GPIO26 remapped via `HardwareSerial::begin(9600, SERIAL_8N1, RX_PIN, TX_PIN)`. Do NOT use GPIO16 (RTC pin) for UART.
+* **Schematic:**
 
 ![RS485 Schematic](./img/Schematic_Rs485_esp32.png)
+
+> **Note:** ESP32 has 3 UARTs (UART0 = USB debug, UART1/UART2 = available). UART2 is used with GPIO25/GPIO26 remapped via `HardwareSerial::begin(9600, SERIAL_8N1, RX_PIN, TX_PIN)`. Do NOT use GPIO16 (RTC pin) for UART.
+
+
+
+
+
+
 
 ---
 

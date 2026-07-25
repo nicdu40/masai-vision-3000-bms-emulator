@@ -7,8 +7,9 @@ const char* WIFI_PASSWORD = "password123";
 TelnetLogger telnetLogger(WIFI_SSID, WIFI_PASSWORD, 23);
 
 // -------------------- RS485 pins (MAX485) --------------------
-#define RS485_RX_PIN    5    // GPIO5 (D1) -> RO
-#define RS485_TX_PIN    4    // GPIO4 (D2) -> DI
+#define RS485_RX_PIN    25   // GPIO25 -> RO
+#define RS485_TX_PIN    26   // GPIO26 -> DI
+
 #define DE_PIN          14   // GPIO14 (D5) -> DE
 #define RE_PIN          12   // GPIO12 (D6) -> RE
 
@@ -287,3 +288,4 @@ void loop() {
     }
   }
 }
+

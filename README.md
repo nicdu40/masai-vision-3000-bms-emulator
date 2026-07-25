@@ -32,16 +32,17 @@ It handles BMS emulation and, when `READ_FRAME_ONLY = true`, passive RS485 frame
 
 ## 📡 Identified RS485 Protocol
 
-Frames use the `86 12` header and end with `E0 F0`. The intermediate fields are still being reverse-engineered.
+BMS response frames use the `86 12` header and end with `E0 F0`. The motorcycle controller also sends frames with a `86 A2` header.
 
-| Register | Role | Observed response format | Status |
+| Frame | Role | Observed response format | Status |
 |---:|---|---|---|
-| `0x05` | Temperatures | `86 12 05 05 T1 T2 T3 T4 T5 CS1 CS2 E0 F0` | Temperatures are sent directly in °C. `CS1 CS2` matches the little-endian 16-bit sum of bytes 1–8 in the captures. |
-| `0x07` | Current | `86 12 07 02 LL HH XX YY E0 F0` | `LL HH` is likely a signed little-endian current in tenths of an ampere. |
-| `0x08` | State of charge | `86 12 08 01 SS CC 00 E0 F0` | `SS` is the SoC in %. Captures suggest `CC = SS + 0x1B`. |
-| `0x0A` | **UNKNOWN** | `86 12 0A 02 LL HH CC 00 E0 F0` | Observed little-endian 16-bit value; role and unit are unknown. |
-| `0x0B` | **UNKNOWN** | `86 12 0B 02 LL 08 CC 00 E0 F0` | Captures: `3C 08 63`, `20 08 47`, `1C 08 43`. `CC = LL + 0x27` in all three cases. |
-| `0x0C` | Charge/discharge state | `86 12 0C 02 EE 00 CC 00 E0 F0` | `00` = idle, `01` = discharging, `02` = charging; `CC = EE + 0x20` observed. |
+| `86 12 05` | Temperatures | `86 12 05 05 T1 T2 T3 T4 T5 CS1 CS2 E0 F0` | Temperatures are sent directly in °C. `CS1 CS2` matches the little-endian 16-bit sum of bytes 1–8 in the captures. |
+| `86 12 07` | Current | `86 12 07 02 LL HH XX YY E0 F0` | `LL HH` is likely a signed little-endian current in tenths of an ampere. |
+| `86 12 08` | State of charge | `86 12 08 01 SS CC 00 E0 F0` | `SS` is the SoC in %. Captures suggest `CC = SS + 0x1B`. |
+| `86 12 0A` | **UNKNOWN** | `86 12 0A 02 LL HH CC 00 E0 F0` | Observed little-endian 16-bit value; role and unit are unknown. |
+| `86 12 0B` | **UNKNOWN** | `86 12 0B 02 LL 08 CC 00 E0 F0` | Captures: `3C 08 63`, `20 08 47`, `1C 08 43`. `CC = LL + 0x27` in all three cases. |
+| `86 12 0C` | Charge/discharge state | `86 12 0C 02 EE 00 CC 00 E0 F0` | `00` = idle, `01` = discharging, `02` = charging; `CC = EE + 0x20` observed. |
+| `86 A2 70` | Controller info (kickstand) | `86 A2 70 04 XX 00 1C 1A 00 00 01 YY E0 F0` | `XX = 0x20` (down) / `0x21` (up); `YY = XX + 0x4C` observed. See [docs](docs/86_A2_70_controleur_info.md). |
 
 The checksum relationships above are derived from the available captures and require validation with additional measurements.
 
@@ -68,12 +69,6 @@ The checksum relationships above are derived from the available captures and req
 ![RS485 Schematic](./img/Schematic_Rs485_esp32.png)
 
 > **Note:** ESP32 has 3 UARTs (UART0 = USB debug, UART1/UART2 = available). UART2 is used with GPIO25/GPIO26 remapped via `HardwareSerial::begin(9600, SERIAL_8N1, RX_PIN, TX_PIN)`. Do NOT use GPIO16 (RTC pin) for UART.
-
-
-
-
-
-
 
 ---
 
@@ -111,7 +106,7 @@ Set `TELNET_DEBUG = true` in `src/main.cpp`, then:
 
 While connected to the serial monitor (115200 baud), you can use the following commands to override values in real time:
 
-* `c[value]` : Toggle charging state (0 / 1)
+* `c[value]` : Set charge state (0=Idle, 1=Discharging, 2=Charging)
 * `t[value]` : Set temperature (e.g., `t25` for 25°C)
 * `a[value]` : Set current in Amps (e.g., `a20` for 20A)
 * `s[value]` : Set State of Charge percentage (e.g., `s80` for 80%)
@@ -135,14 +130,17 @@ masai-vision-3000-bms-emulator/
 │       ├── TelnetLogger.h
 │       └── TelnetLogger.cpp
 ├── docs/                         # Protocol reverse-engineering documentation
-│   ├── 05_protocol_temperature.md
-│   ├── 07_protocol_current.md
-│   ├── 08_protocol_soc.md
-│   ├── 0A_protocol_unknown.md
-│   ├── 0B_protocol_unknown.md
-│   └── 0C_protocol_charge_discharge_state.md
+│   ├── 86_12_05_protocol_temperature.md
+│   ├── 86_12_07_protocol_current.md
+│   ├── 86_12_08_protocol_soc.md
+│   ├── 86_12_0A_protocol_unknown.md
+│   ├── 86_12_0B_protocol_unknown.md
+│   ├── 86_12_0C_protocol_charge_discharge_state.md
+│   └── 86_A2_70_controleur_info.md
 ├── img/                          # Project images and schematics
-│   └── Schematic_Rs485_esp32.png
+│   ├── Schematic_Rs485_esp32.png
+│   ├── esp32.png
+│   └── max485.png
 └── test/
     └── README                    # Test directory placeholder
 ```

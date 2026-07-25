@@ -37,4 +37,10 @@ The captures are consistent with `CC = EE + 0x20`. This is verified for the thre
 
 ## Emulator Behavior
 
-The emulator sends `EE = 02` when charging mode is enabled and `EE = 00` otherwise. It does not yet generate the distinct discharging state (`EE = 01`).
+The emulator uses a `chargeState` variable (0=Idle, 1=Discharging, 2=Charging) set via the `c[value]` serial command. It sends `EE = chargeState` and `CC = 0x20 + chargeState`, covering all three states:
+
+| `chargeState` | State | `EE` | `CC` | Frame |
+|---|---|---|---|---|
+| 0 | Idle | `00` | `20` | `86 12 0C 02 00 00 20 00 E0 F0` |
+| 1 | Discharging | `01` | `21` | `86 12 0C 02 01 00 21 00 E0 F0` |
+| 2 | Charging | `02` | `22` | `86 12 0C 02 02 00 22 00 E0 F0` |

@@ -28,7 +28,8 @@ static const uint32_t FRAME_TIMEOUT_MS = 20;
 static uint32_t lastByteAt = 0;
 
 // -------------------- Simulator params --------------------
-static bool isCharging = false;
+static uint8_t chargeState = 0; // 0=Idle, 1=Discharging, 2=Charging
+static uint8_t kickstandState = 0; // 0=down, 1=up (from 86 A2 70 frame)
 static uint8_t desiredTemperatureC = 20;
 static float desiredCurrentAmps = 50.0f;
 static uint8_t desiredSocPercent = 50;
@@ -79,9 +80,13 @@ static void handleUsbInteractive() {
       if (strlen(line) > 1) val = atol(line + 1);
       switch (cmd) {
         case 'c': case 'C':
-          isCharging = (val != 0);
-          Serial.print("[INTERACTIVE] Charging mode: ");
-          Serial.println(isCharging ? "ON" : "OFF");
+          if (val >= 0 && val <= 2) chargeState = (uint8_t)val;
+          Serial.print("[INTERACTIVE] Charge state: ");
+          switch (chargeState) {
+            case 0: Serial.println("Idle"); break;
+            case 1: Serial.println("Discharging"); break;
+            case 2: Serial.println("Charging"); break;
+          }
           break;
         case 't': case 'T':
           if (val < 0) val = 0; if (val > 99) val = 99;
@@ -168,6 +173,18 @@ static void processQuery(uint8_t *frame, size_t len) {
   debugPrintMotorcycleFrame(frame, len);
   if (len < 4) return;
   if (frame[0] != 0x86) return;
+
+  // Detect kickstand state from 86 A2 70 frame
+  if (frame[1] == 0xA2 && frame[2] == 0x70 && len >= 12) {
+    uint8_t newState = (frame[4] == 0x21) ? 1 : 0;
+    if (newState != kickstandState) {
+      kickstandState = newState;
+      Serial.print("[KICKSTAND] ");
+      Serial.println(kickstandState ? "UP" : "DOWN");
+    }
+    return;
+  }
+
   if (frame[1] == 0x12) {
     uint8_t reg = frame[2];
     if (reg == 0x25) {
@@ -191,7 +208,7 @@ static void processQuery(uint8_t *frame, size_t len) {
     }
     switch (reg) {
       case 0x05: sendTempResponse(desiredTemperatureC); break;
-      case 0x07: sendCurrentResponse(desiredCurrentAmps, isCharging); break;
+      case 0x07: sendCurrentResponse(desiredCurrentAmps, chargeState == 2); break;
       case 0x08: sendSocResponse(desiredSocPercent); break;
       case 0x0A: {
         testRegister0AValue++;
@@ -206,13 +223,10 @@ static void processQuery(uint8_t *frame, size_t len) {
         break;
       }
       case 0x0C: {
-        if (isCharging) {
-          uint8_t resp[] = { 0x86, 0x12, 0x0C, 0x02, 0x02, 0x00, 0x22, 0x00, 0xE0, 0xF0 };
-          sendBmsResponse(resp, sizeof(resp));
-        } else {
-          uint8_t resp[] = { 0x86, 0x12, 0x0C, 0x02, 0x00, 0x00, 0x20, 0x00, 0xE0, 0xF0 };
-          sendBmsResponse(resp, sizeof(resp));
-        }
+        uint8_t state = chargeState;
+        uint8_t cc = 0x20 + state;
+        uint8_t resp[] = { 0x86, 0x12, 0x0C, 0x02, state, 0x00, cc, 0x00, 0xE0, 0xF0 };
+        sendBmsResponse(resp, sizeof(resp));
         break;
       }
       default: break;
